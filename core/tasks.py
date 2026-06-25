@@ -35,6 +35,7 @@ def handle_response(response: Response):
                 nickname = item.get("user", {}).get("nickname")
                 user_id = item.get("user_id", "")
                 userIDDict[str(short_id)] = {"nickname": nickname, "user_id": user_id}
+                logger.info(f"缓存用户 ShortId={short_id} nickname={nickname}")
         except Exception as e:
             tb = traceback.extract_tb(e.__traceback__)
             last = tb[-1]
@@ -122,14 +123,19 @@ def scroll_and_select_user(page, username, targets):
                     continue  # 已处理过，跳过
                 found_targets.add(targetName)
 
-                logger.debug(f"账号 {username} 找到好友 {targetName}")
+                logger.info(f"发现好友: {targetName}")
+                logger.info(f"当前缓存用户数量: {len(userIDDict)}")
+                logger.info(f"当前缓存ShortId: {list(userIDDict.keys())}")
                 # 检查是否是目标用户名
                 if matchMode == "short_id":
                     targetSymbol = next((sid for sid, info in userIDDict.items() if info.get("nickname") == targetName), None)
+                    logger.info(f"昵称[{targetName}] -> ShortId[{targetSymbol}]")
                 else:
                     targetSymbol = targetName
 
+                logger.info(f"目标列表: {targets}")
                 if targetSymbol in targets:
+                    logger.info(f"✅ 匹配成功: {targetName} -> {targetSymbol}")
                     element.click()
                     if matchMode == "short_id":
                         logger.debug(
@@ -140,6 +146,8 @@ def scroll_and_select_user(page, username, targets):
                             f"账号 {username} 选中目标好友 {targetName} (ShortId: {targetSymbol}) 准备开始交互"
                         )
                     yield targetName
+                else:
+                    logger.warning(f"❌ 未匹配: {targetName} -> {targetSymbol}")
                     
                     # [修改] 标记已找到，如果全找到了直接退出
                     if targetSymbol in remaining_targets:
